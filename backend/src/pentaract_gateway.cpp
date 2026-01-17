@@ -24,6 +24,7 @@ public:
     // Авторизация в системе
     bool login(string email, string password) {
         cout << "🔑 Пытаемся войти в систему..." << endl;
+        cout << "📡 Отправляем запрос на: " << base_url + "/api/v1/auth/token" << endl;
         
         // Создаём JSON для входа
         string login_data = "{"
