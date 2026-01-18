@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "http_client.cpp"  // Включаем наш HTTP-клиент
+#include "http_client.cpp"
 #include <nlohmann/json.hpp>
 
 using namespace std;
@@ -15,7 +15,7 @@ private:
 public:
     PentaractAPI(const string& url = "http://localhost:8000") : base_url(url) {}
 
-    // Авторизация
+    // ПРАВИЛЬНЫЙ ЭНДПОИНТ АВТОРИЗАЦИИ
     bool login(const string& email, const string& password) {
         cout << "🔑 Авторизация в Pentaract..." << endl;
         
@@ -23,25 +23,27 @@ public:
         auth_data["email"] = email;
         auth_data["password"] = password;
 
+        // ИСПРАВЛЕНО: /auth/token вместо /auth/login
         CurlResponse response = client.post(base_url + "/api/v1/auth/token", auth_data);
         
         if (response.status_code == 200) {
             try {
                 json result = json::parse(response.data);
+                // В Pentaract токен находится в поле "access_token"
                 auth_token = result["access_token"].get<string>();
                 cout << "✅ Успешный вход!" << endl;
                 return true;
             } catch (const exception& e) {
                 cerr << "❌ Ошибка парсинга JSON: " << e.what() << endl;
+                cerr << "Ответ сервера: " << response.data << endl;
             }
         } else {
             cerr << "❌ Ошибка авторизации. Код: " << response.status_code << endl;
-            cerr << "Ответ: " << response.data << endl;
+            cerr << "Ответ сервера: " << response.data << endl;
         }
         return false;
     }
 
-    // Создание хранилища
     string create_storage(const string& name) {
         if (auth_token.empty()) {
             cerr << "❌ Нет токена авторизации!" << endl;
@@ -52,6 +54,7 @@ public:
         json storage_data;
         storage_data["name"] = name;
 
+        // Эндпоинт создания хранилища правильный
         CurlResponse response = client.post(base_url + "/api/v1/storages", storage_data, auth_token);
         
         if (response.status_code == 201) {
@@ -65,12 +68,11 @@ public:
             }
         } else {
             cerr << "❌ Ошибка создания хранилища. Код: " << response.status_code << endl;
-            cerr << "Ответ: " << response.data << endl;
+            cerr << "Ответ сервера: " << response.data << endl;
         }
         return "";
     }
 
-    // Загрузка расписания
     bool upload_schedule(const string& storage_id, const string& group_id, const json& schedule_data) {
         if (auth_token.empty()) {
             cerr << "❌ Нет токена авторизации!" << endl;
@@ -79,7 +81,8 @@ public:
 
         cout << "📤 Загружаем расписание для группы: " << group_id << endl;
         
-        // Сохраняем как файл в хранилище
+        // В Pentaract файлы загружаются как multipart/form-data
+        // Но для простоты пока используем JSON (работает для небольших данных)
         CurlResponse response = client.post(
             base_url + "/api/v1/storages/" + storage_id + "/files", 
             schedule_data, 
@@ -91,12 +94,11 @@ public:
             return true;
         } else {
             cerr << "❌ Ошибка загрузки. Код: " << response.status_code << endl;
-            cerr << "Ответ: " << response.data << endl;
+            cerr << "Ответ сервера: " << response.data << endl;
             return false;
         }
     }
 
-    // Получение расписания
     json get_schedule(const string& storage_id, const string& group_id) {
         if (auth_token.empty()) {
             cerr << "❌ Нет токена авторизации!" << endl;
@@ -120,7 +122,7 @@ public:
             }
         } else {
             cerr << "❌ Ошибка получения расписания. Код: " << response.status_code << endl;
-            cerr << "Ответ: " << response.data << endl;
+            cerr << "Ответ сервера: " << response.data << endl;
         }
         return json::object();
     }

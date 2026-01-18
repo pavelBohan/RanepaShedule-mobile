@@ -12,7 +12,7 @@ int main() {
     PentaractAPI api("http://localhost:8000");
 
     // 1. Авторизация (используй свои данные из .env)
-    if (api.login("you@example.com", "your_secure_password")) {
+    if (api.login("admin@ranepa.ru", "SecurePass123!")) {
         
         // 2. Создаём хранилище
         string storage_id = api.create_storage("ranepa-schedule");
