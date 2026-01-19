@@ -24,7 +24,7 @@ public:
         auth_data["password"] = password;
 
         // ИСПРАВЛЕНО: /auth/token вместо /auth/login
-        CurlResponse response = client.post(base_url + "/api/v1/auth/token", auth_data);
+        CurlResponse response = client.post(base_url + "/api/auth/login", auth_data);
         
         if (response.status_code == 200) {
             try {
@@ -44,18 +44,18 @@ public:
         return false;
     }
 
-    string create_storage(const string& name) {
+        string create_storage(const string& name, long long chat_id) {
         if (auth_token.empty()) {
             cerr << "❌ Нет токена авторизации!" << endl;
             return "";
         }
 
-        cout << "📁 Создаём хранилище: " << name << endl;
+        cout << "📁 Создаём хранилище: " << name << " (chat_id: " << chat_id << ")" << endl;
         json storage_data;
         storage_data["name"] = name;
+        storage_data["chat_id"] = chat_id; // ОБЯЗАТЕЛЬНОЕ ПОЛЕ
 
-        // Эндпоинт создания хранилища правильный
-        CurlResponse response = client.post(base_url + "/api/v1/storages", storage_data, auth_token);
+        CurlResponse response = client.post(base_url + "/api/storages", storage_data, auth_token);
         
         if (response.status_code == 201) {
             try {
@@ -81,20 +81,45 @@ public:
 
         cout << "📤 Загружаем расписание для группы: " << group_id << endl;
         
-        // В Pentaract файлы загружаются как multipart/form-data
-        // Но для простоты пока используем JSON (работает для небольших данных)
-        CurlResponse response = client.post(
-            base_url + "/api/v1/storages/" + storage_id + "/files", 
-            schedule_data, 
+        // Конвертируем JSON в строку
+        string json_str = schedule_data.dump();
+        
+        // Создаём временный файл
+        string filename = "schedule_" + group_id + ".json";
+        ofstream file(filename);
+        if (file.is_open()) {
+            file << json_str;
+            file.close();
+        } else {
+            cerr << "❌ Не удалось создать временный файл!" << endl;
+            return false;
+        }
+
+        // Формируем multipart/form-data вручную (упрощённо)
+        string boundary = "----CurlBoundary7MA4YWxkTrZu0gW";
+        string body = "--" + boundary + "\r\n"
+            "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n"
+            "Content-Type: application/json\r\n\r\n"
+            + json_str + "\r\n"
+            "--" + boundary + "--\r\n";
+
+        // Отправляем запрос
+        CurlResponse response = client.post_multipart(
+            base_url + "/api/storages/" + storage_id + "/files",
+            body,
+            boundary,
             auth_token
         );
         
         if (response.status_code == 201) {
             cout << "✅ Расписание успешно загружено!" << endl;
+            // Удаляем временный файл
+            remove(filename.c_str());
             return true;
         } else {
             cerr << "❌ Ошибка загрузки. Код: " << response.status_code << endl;
             cerr << "Ответ сервера: " << response.data << endl;
+            remove(filename.c_str());
             return false;
         }
     }
@@ -108,7 +133,7 @@ public:
         cout << "📥 Загружаем расписание для группы: " << group_id << endl;
         
         CurlResponse response = client.get(
-            base_url + "/api/v1/storages/" + storage_id + "/files",
+            base_url + "/api/storages/" + storage_id + "/files",
             auth_token
         );
         
