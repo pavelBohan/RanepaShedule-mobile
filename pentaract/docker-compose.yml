@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: pentaract
+      POSTGRES_USER: pentaract
+      POSTGRES_PASSWORD: secure_password_123
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      - pentaract-net
+
+  pentaract:
+    image: thedominux/pentaract:latest
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - pentaract-net
+
+networks:
+  pentaract-net:
+    driver: bridge

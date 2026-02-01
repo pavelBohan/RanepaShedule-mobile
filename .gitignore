@@ -1,0 +1,27 @@
+# Flutter
+/build
+/.dart_tool
+/.pub-cache
+/.packages
+*.log
+
+# C++
+/backend/build/
+/backend/*.so
+/backend/*.dll
+/backend/*.exe
+/backend/cmake-build-*/
+
+# Docker
+/pentaract/.env
+/pentaract/postgres_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
